@@ -10,12 +10,12 @@ from llama_index.core.storage.docstore import SimpleDocumentStore
 
 num_workers=1
 
-# loads BAAI/bge-small-en-v1.5
-embed_model = HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
+# loads jinaai/jina-embeddings-v3
+embed_model = HuggingFaceEmbedding(model_name="jinaai/jina-embeddings-v3")
 
 Settings.embed_model=embed_model
 
-documents = SimpleDirectoryReader(input_dir="./data").load_data(show_progress=True,num_workers=num_workers)
+documents = SimpleDirectoryReader(input_dir="./data",recursive=True).load_data(show_progress=True,num_workers=num_workers)
 pipeline = IngestionPipeline(
     transformations=[
         SentenceSplitter(chunk_size=512,chunk_overlap=256),
