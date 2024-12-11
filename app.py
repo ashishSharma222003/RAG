@@ -1,45 +1,37 @@
-import streamlit as st
 from chat import query_engine
+import streamlit as st
+
+# Set Streamlit app title
+st.title("RAG")
 
 
 
-# Function to maintain the conversation state
-def run_chatbot():
-    # Initialize chat history (a list of message pairs)
-    if 'messages' not in st.session_state:
-        st.session_state.messages = []
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    # Display the chat history
-    for message in st.session_state.messages:
-        message_type = message['type']
-        message_text = message['text']
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Input field for the user's message
+if prompt := st.chat_input("Ask something..."):
+    # Add user message to the session state
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    # Show user message in chat
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Generate response from OpenAI model
+    with st.chat_message("assistant"):
         
-        if message_type == 'user':
-            st.write(f"**You:** {message_text}")
-        elif message_type == 'bot':
-            st.write(f"**Chatbot:** {message_text}")
+        # Extract the response content
+        assistant_reply = query_engine.query(prompt)
+        
+        # Stream the assistant's response in chunks (optional for more interaction)
+        # For now, we will directly add the response to the chat history
+        st.markdown(assistant_reply)
     
-    # User input box
-    user_input = st.text_input("You:", key="user_input")
-    
-    if user_input:
-        # Add the user message to the session state
-        st.session_state.messages.append({"type": "user", "text": user_input})
-        
-        # Get the response from query_engine
-        bot_response = query_engine.query(user_input)
-        
-        # Add the bot's response to the session state
-        st.session_state.messages.append({"type": "bot", "text": bot_response})
-        
-        # Clear the input box after sending the message
-        st.session_state.user_input = ""
-
-# Main Streamlit app layout
-def main():
-    st.title("Chatbot Interface")
-    
-    run_chatbot()
-
-if __name__ == "__main__":
-    main()
+    # Add assistant response to message history
+    st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
