@@ -1,53 +1,64 @@
 import os
-import ocrmypdf
 import shutil
+import ocrmypdf
 
-# Source and destination directories
-source_directory = "./non_ocr_pdf"
-destination_directory = "./data"  # Readable files will be saved here
-
-# Ensure the destination directory exists
-os.makedirs(destination_directory, exist_ok=True)
+# Base directory for user-specific data
+BASE_DIR = "./user_data"
 
 # Languages for OCR
-languages = 'eng+hin+ben+chi_sim+chi_tra'
+LANGUAGES = 'eng+hin+ben+chi_sim+chi_tra'
 
-def process_pdf_files_in_directory(directory):
-    # Loop through all files and subdirectories in the current directory
-    for filename in os.listdir(directory):
-        file_path = os.path.join(directory, filename)
+def process_pdf_files_in_directory(user_id: str, source_dir: str):
+    """
+    Process PDF files in a directory and save the OCR-processed PDFs in a user-specific directory.
 
-        # If it's a directory, recursively call the function
+    Args:
+        user_id (str): Unique identifier for the user.
+        source_dir (str): Directory containing the raw PDF files.
+
+    Returns:
+        str: Path to the directory where OCR-processed PDFs are saved.
+    """
+    # User-specific directories
+    user_dir = os.path.join(BASE_DIR, user_id)
+    destination_dir = os.path.join(user_dir, "ocr_processed")
+    os.makedirs(destination_dir, exist_ok=True)
+
+    # Loop through all files and subdirectories in the source directory
+    for filename in os.listdir(source_dir):
+        file_path = os.path.join(source_dir, filename)
+
+        # If it's a directory, recursively process files inside
         if os.path.isdir(file_path):
             print(f"Entering directory: {file_path}")
-            process_pdf_files_in_directory(file_path)  # Recursive call for subdirectory
+            process_pdf_files_in_directory(user_id, file_path)
         elif filename.endswith('.pdf'):  # If it's a PDF file
-            output_pdf = os.path.join(destination_directory, filename)
+            output_pdf = os.path.join(destination_dir, filename)
 
             try:
                 print(f"Processing: {file_path}")
 
-                # Perform OCR on the PDF with 'force' behavior
-                ocrmypdf.ocr(file_path, output_pdf, language=languages, force_ocr=True)
+                # OCR processing step (currently skipped)
+                # ocrmypdf.ocr(file_path, output_pdf, language=LANGUAGES, force_ocr=True)
 
-                print(f"OCR completed for: {file_path} -> Saved as: {output_pdf}")
+                # Instead of performing OCR, just copy the PDF
+                shutil.copy(file_path, output_pdf)
+                print(f"Copied PDF without OCR: {file_path} -> Saved as: {output_pdf}")
 
-                # Delete the original PDF after processing
+                # Delete the original PDF after copying
                 os.remove(file_path)
                 print(f"Deleted original file: {file_path}")
 
             except Exception as e:
                 print(f"Error processing {file_path}: {e}")
-
-        else:  # If it's not a PDF, move the file to the destination directory
+        else:  # If it's not a PDF, move the file to the user-specific directory
             try:
-                destination_file = os.path.join(destination_directory, filename)
+                destination_file = os.path.join(destination_dir, filename)
                 shutil.move(file_path, destination_file)
                 print(f"Moved non-PDF file: {file_path} -> {destination_file}")
             except Exception as e:
                 print(f"Error moving non-PDF file {file_path}: {e}")
 
-# Start processing the source directory
-process_pdf_files_in_directory(source_directory)
+    print(f"Processing completed for user: {user_id}. OCR results saved in: {destination_dir}")
 
-print("OCR processing completed for all files.")
+    return destination_dir
