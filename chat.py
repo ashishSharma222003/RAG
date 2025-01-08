@@ -12,19 +12,21 @@ from llama_index.core.postprocessor import LLMRerank
 from llama_index.core.indices.query.query_transform.base import StepDecomposeQueryTransform
 from CustomRetriever import CustomRetriever
 
+import os
+
 def initialize_query_engine(
-    vector_index_folder: str, 
-    keyword_index_folder: str,
-    embedding_model_name: str = "BAAI/bge-small-en-v1.5", 
+    user_id: str,
+    base_dir: str = "./user_data",
+    embedding_model_name: str = "BAAI/bge-small-en-v1.5",
     llm_model_name: str = "llama3.2:3b",
     similarity_top_k: int = 10
 ):
     """
-    Initializes a query engine from specified index folders.
+    Initializes a query engine for a specific user by automatically detecting index paths.
 
     Args:
-        vector_index_folder (str): Path to the folder containing the vector index.
-        keyword_index_folder (str): Path to the folder containing the keyword index.
+        user_id (str): Unique identifier for the user.
+        base_dir (str): Base directory where user-specific indices are stored. Default is './user_data'.
         embedding_model_name (str): Name of the HuggingFace embedding model.
         llm_model_name (str): Name of the LLM model.
         similarity_top_k (int): Number of top results for similarity search.
@@ -32,6 +34,17 @@ def initialize_query_engine(
     Returns:
         MultiStepQueryEngine: A query engine ready to process user queries.
     """
+    # Dynamically locate user-specific index paths
+    user_dir = os.path.join(base_dir, user_id)
+    vector_index_path = os.path.join(user_dir, "vector_index")
+    keyword_index_path = os.path.join(user_dir, "keyword_index")
+
+    if not (os.path.exists(vector_index_path) and os.path.exists(keyword_index_path)):
+        raise FileNotFoundError(f"Indices for user '{user_id}' not found.")
+
+    print(f"Using vector index path: {vector_index_path}")
+    print(f"Using keyword index path: {keyword_index_path}")
+
     # Initialize embedding model
     embed_model = HuggingFaceEmbedding(model_name=embedding_model_name, trust_remote_code=True)
     Settings.embed_model = embed_model
@@ -41,8 +54,8 @@ def initialize_query_engine(
     Settings.llm = llm
 
     # Load stored indices
-    vector_storage_context = StorageContext.from_defaults(persist_dir=vector_index_folder)
-    keyword_storage_context = StorageContext.from_defaults(persist_dir=keyword_index_folder)
+    vector_storage_context = StorageContext.from_defaults(persist_dir=vector_index_path)
+    keyword_storage_context = StorageContext.from_defaults(persist_dir=keyword_index_path)
 
     vector_index = load_index_from_storage(storage_context=vector_storage_context)
     keyword_index = load_index_from_storage(storage_context=keyword_storage_context)
@@ -68,18 +81,18 @@ def initialize_query_engine(
         retriever=custom_retriever,
         response_synthesizer=response_synthesizer,
         node_postprocessors=[
-            LLMRerank(choice_batch_size=5, top_n=2)  # Reranker configuration
+            LLMRerank(choice_batch_size=10, top_n=5)  # Reranker configuration
         ]
     )
 
     print("Query engine setup completed.")
 
     # Setup multi-step query engine
-    query_engine = MultiStepQueryEngine(
-        custom_query_engine, 
-        query_transform=step_decompose_transform,
-        index_summary="You are the best giver."  # Optional context for summarization
-    )
+    # query_engine = MultiStepQueryEngine(
+    #     custom_query_engine, 
+    #     query_transform=step_decompose_transform,
+    #     index_summary="You are the best giver."  # Optional context for summarization
+    # )
 
-    print("Multi-step query engine initialized.")
-    return query_engine
+    # print("Multi-step query engine initialized.")
+    return custom_query_engine
