@@ -1,12 +1,14 @@
 import os  # Import os for checking folder existence
-from chat import query_engine, faithfullnes, correctness, relevancy
+from chat import initialize_query_engine
 import streamlit as st
 import pandas as pd
 import time
 import json
 from datetime import datetime
 import shutil
-
+from ocr import process_pdf_files_in_directory
+from document_embedder import create_and_save_user_indices
+import tempfile
 # Load users from the JSON file
 def load_users():
     try:
@@ -21,6 +23,25 @@ def get_user_folder(user_id):
     if user_id in users:
         return users[user_id]["folder_name"]
     return None
+def check_user_directories(user_id: str, base_dir: str = "./user_data"):
+    # Construct the paths for vector and keyword directories
+    user_dir = os.path.join(base_dir, user_id)
+    vector_store_dir = os.path.join(user_dir, "vector_index")
+    keyword_store_dir = os.path.join(user_dir, "keyword_index")
+
+    # Check if both directories exist
+    vector_exists = os.path.exists(vector_store_dir) and os.path.isdir(vector_store_dir)
+    keyword_exists = os.path.exists(keyword_store_dir) and os.path.isdir(keyword_store_dir)
+
+    if vector_exists and keyword_exists:
+        print(f"Both 'vector_index' and 'keyword_index' directories exist for user: {user_id}")
+        return True  # Both directories exist
+    else:
+        if not vector_exists:
+            print(f"'{vector_store_dir}' does not exist for user: {user_id}")
+        if not keyword_exists:
+            print(f"'{keyword_store_dir}' does not exist for user: {user_id}")
+        return False  # One or both directories are missing
 
 # Load chat history from the JSON file
 def load_chats():
@@ -90,12 +111,12 @@ else:
         chat_history[user_id][current_date] = []
 
     # Retrieve the folder name for the logged-in user
-    folder_name = get_user_folder(st.session_state.user_id)
-    # print(folder_name)
-    folder_exists = folder_name is not None and os.path.exists(folder_name) and os.path.isdir(folder_name)
+    # folder_name = get_user_folder(st.session_state.user_id)
+    # # print(folder_name)
+    # folder_exists = folder_name is not None and os.path.exists(folder_name) and os.path.isdir(folder_name)
 
 
-    if folder_exists and folder_name:
+    if check_user_directories(user_id):
         # Show the "Chat" tab only if the folder exists
         tab1, tab2 = st.tabs(["Chat", "Folder Check"])
 
@@ -119,6 +140,7 @@ else:
                 with st.chat_message("assistant"):
                     try:
                         start = time.time()
+                        query_engine=initialize_query_engine(user_id=user_id)
                         assistant_reply = query_engine.query(prompt)
                         end = time.time()
                         
@@ -135,25 +157,36 @@ else:
                 save_chats(chat_history)
 
         with tab2:
-            st.header("Folder Check")
-            st.success(f"The folder '{folder_name}' exists in the current directory!")
+            st.header("Embeddings Check")
+            st.success(f"Embeddings for '{user_id}' exists in the database!")
 
-            # Add a button to allow the user to delete the folder
-            delete_button = st.button("Delete Folder")
+            # Limit the file upload size to 5MB
+            uploaded_file = st.file_uploader("Please upload a PDF to proceed.", type=["pdf"])
+            
+            if uploaded_file:
+                # Check if the file size is less than or equal to 5MB
+                if uploaded_file.size <= 5 * 1024 * 1024:  # 5MB in bytes
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        temp_file_path = os.path.join(temp_dir, uploaded_file.name)
 
-            if delete_button:
-                # Confirm deletion action
-                users = load_users()
-                print(user_id)
-                if user_id in users:
-                            users[user_id]["folder_name"]=None
-                            save_users(users)
-                
-                st.success(f"The folder '{folder_name} is deleted") 
-                st.rerun()
+                        # Save the uploaded file to the temporary directory
+                        with open(temp_file_path, "wb") as f:
+                            f.write(uploaded_file.getbuffer())
+                        st.success(f"Uploaded {uploaded_file.name} successfully!")
+
+                        # Process the uploaded file
+                        destination_dir=process_pdf_files_in_directory(user_id=user_id, source_dir=temp_dir)
+
+                        # Create indices for the processed files
+                        create_and_save_user_indices(user_id=user_id, input_dir=destination_dir)
+
+                        st.success("File processed and indices created successfully!. Please restart this platform.")
+                else:
+                    st.error("File size exceeds the 5MB limit. Please upload a smaller file.")
+                # st.rerun()
     else:
-        st.header("Folder Check")
-        st.warning(f"The folder '{folder_name}' does not exist.")
+        st.header("Embeddings Check")
+        st.success(f"Embeddings for '{user_id}' exists in the database!")
         
         # Limit the file upload size to 5MB
         uploaded_file = st.file_uploader("Please upload a PDF to proceed.", type=["pdf"])
@@ -161,9 +194,21 @@ else:
         if uploaded_file:
             # Check if the file size is less than or equal to 5MB
             if uploaded_file.size <= 5 * 1024 * 1024:  # 5MB in bytes
-                file_path = os.path.join(os.getcwd(), uploaded_file.name)
-                with open(file_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                st.success(f"Uploaded {uploaded_file.name} successfully!")
+                # file_path = os.path.join(os.getcwd(), uploaded_file.name)
+                with tempfile.TemporaryDirectory() as temp_dir:
+                        temp_file_path = os.path.join(temp_dir, uploaded_file.name)
+
+                        # Save the uploaded file to the temporary directory
+                        with open(temp_file_path, "wb") as f:
+                            f.write(uploaded_file.getbuffer())
+                        st.success(f"Uploaded {uploaded_file.name} successfully!")
+
+                        # Process the uploaded file
+                        destination_dir=process_pdf_files_in_directory(user_id=user_id, source_dir=temp_dir)
+
+                        # Create indices for the processed files
+                        create_and_save_user_indices(user_id=user_id, input_dir=destination_dir)
+
+                        st.success("File processed and indices created successfully!. Please restart this platform.")
             else:
                 st.error("File size exceeds the 5MB limit. Please upload a smaller file.")
