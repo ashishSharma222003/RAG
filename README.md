@@ -1,14 +1,11 @@
 # RAG with Hybrid Search
 
-This project demonstrates the integration of multiple retrievers (keyword and semantic search) in **LlamaIndex** for advanced query processing, using a custom retrieval mechanism and query decomposition. It utilizes a combination of `VectorStore` and `KeywordTable` indices to achieve hybrid search, integrating semantic and keyword-based retrieval.
+This project demonstrates the integration of multiple retrievers (keyword and semantic search) in **LlamaIndex** for advanced query processing, using a custom retrieval mechanism . It utilizes a combination of `VectorStore` and `KeywordTable` indices to achieve hybrid search, integrating semantic and keyword-based retrieval.
 
 ### Key Features:
 - **Hybrid Search**: Combines vector-based semantic search and keyword-based search.
-- **Query Decomposition**: Decomposes user queries into sub-queries for more granular and accurate search results.
 - **Post-Processing with Reranking**: Applies LLM-based reranking on retrieved results to improve answer quality.
-- **Evaluation Metrics**: Includes relevancy, correctness, and faithfulness evaluators for assessing response quality.
 - **Streamlit Interface**: Displays correctness, relevancy scores, and latency for each query in a user-friendly interface.
-- **OCR Processing**: Converts PDFs to readable text using OCR technology.
 - **Document Embedding**: Converts PDF documents into vector embeddings and keyword-based indices for search.
 
 ---
@@ -18,11 +15,9 @@ This project demonstrates the integration of multiple retrievers (keyword and se
 1. [Requirements](#requirements)
 2. [Setup and Installation](#setup-and-installation)
 3. [Usage](#usage)
-    - [OCR Processing](#ocr-processing)
     - [Document Embedding](#document-embedding)
 4. [Streamlit Interface](#streamlit-interface)
 5. [Evaluation](#evaluation)
-
 
 ---
 
@@ -33,8 +28,8 @@ This project demonstrates the integration of multiple retrievers (keyword and se
 - Hugging Face Transformers
 - Ollama SDK
 - Streamlit (for the web interface)
-- Tesseract OCR (for PDF text extraction)
-- `ocrmypdf` (for processing PDFs with OCR)
+- Tesseract OCR (for PDF text extraction) **(Note: OCR is currently skipped)**
+- `ocrmypdf` (for processing PDFs with OCR) **(Note: OCR functionality is currently disabled)**
 - Other dependencies specified in `requirements.txt`
 
 ---
@@ -95,40 +90,9 @@ Ensure your indices (`vector_index` and `keyword_index`) are properly configured
 
 ## Usage
 
-### OCR Processing (`ocr.py`)
-
-If you have PDF documents that need to be processed and converted into readable text, use the **OCR** (Optical Character Recognition) functionality provided in the `ocr.py` script. This script will process all PDF files from a source directory, run OCR on them, and save the output in a destination directory as readable PDF files.
-
-#### Steps to Use `ocr.py`:
-
-1. **Set Up Source and Destination Directories**:
-   - The source directory (`./non_ocr_pdf`) should contain all the PDFs that need OCR processing.
-   - The destination directory (`./data`) is where the readable PDFs will be saved.
-
-2. **Run the Script**:
-   To start OCR processing, run the following command:
-
-   ```bash
-   python ocr.py
-   ```
-
-   This will:
-   - Scan all PDFs in the `./non_ocr_pdf` directory.
-   - Perform OCR on each PDF using Tesseract OCR and save the output as a new PDF in the `./data` directory.
-   - After processing, the original PDF file will be deleted.
-
-   **Languages Supported**: The OCR will process documents in multiple languages, including:
-   - English (`eng`)
-   - Hindi (`hin`)
-   - Bengali (`ben`)
-   - Simplified Chinese (`chi_sim`)
-   - Traditional Chinese (`chi_tra`)
-
-3. **Note**: If the PDFs are already OCR-processed, the `ocr.py` script will forcefully reprocess them with the `force_ocr=True` flag.
-
 ### Document Embedding (`document_embeder.py`)
 
-Once the PDFs have been processed using OCR, you can convert these readable PDFs into **vector embeddings** and **keyword-based indices** using the `document_embeder.py` script. This script uses the **BAAI/bge-small-en-v1.5** embedding model to create embeddings and store them in the respective directories.
+Once the PDFs have been processed (OCR step is currently skipped), you can convert these readable PDFs into **vector embeddings** and **keyword-based indices** using the `document_embeder.py` script. This script uses the **BAAI/bge-small-en-v1.5** embedding model to create embeddings and store them in the respective directories.
 
 #### Steps to Use `document_embeder.py`:
 
@@ -162,7 +126,7 @@ These indices will be loaded during the query processing stage for hybrid search
 
 ## Streamlit Interface
 
-The project includes a **Streamlit app** (`app.py`) that provides an interactive interface for users to query the engine and see performance metrics such as correctness, relevancy, and latency.
+The project includes a **Streamlit app** (`app.py`) that provides an interactive interface for users to query the engine .
 
 ### Running the Streamlit App:
 To run the Streamlit app, simply execute the following command in your terminal:
@@ -174,33 +138,9 @@ streamlit run app.py
 This will open a local web interface where you can:
 - Enter a query.
 - View the generated response.
-- See the **correctness**, **relevancy**, and **latency** metrics for each query.
 
-The Streamlit interface provides a user-friendly way to interact with the query engine and visualize the quality and performance of the responses.
 
----
-
-## Evaluation
-
-The response quality can be evaluated using three different evaluators:
-1. **Relevancy Evaluator**: Assesses how relevant the response is to the original query.
-2. **Correctness Evaluator**: Compares the response to a reference answer for factual accuracy.
-3. **Faithfulness Evaluator**: Ensures that the response maintains faithfulness to the original context and query.
-
-You can use these evaluators by calling the respective functions, for example:
-
-```python
-# Relevancy evaluation
-relevancy_score = relevancy("Why is Blue Ocean Strategy important?", response)
-
-# Correct
-
-ness evaluation
-correctness_score = correctness(response, "Why is Blue Ocean Strategy important?", "Reference Answer")
-
-# Faithfulness evaluation
-faithfulness_score = faithfullnes(response)
-```
+The Streamlit interface provides a user-friendly way to interact with the query engine.
 
 ---
 
@@ -210,7 +150,6 @@ faithfulness_score = faithfullnes(response)
 .
 ├── chat.py                    # Main script to run the query engine
 ├── app.py                     # Streamlit app for displaying correctness, relevancy, and latency
-├── ocr.py                     # OCR script to convert PDFs to readable text
 ├── document_embeder.py        # Script to convert PDFs into vectors and keywords
 ├── CustomRetriever.py          # Custom hybrid retriever combining keyword and vector retrieval
 ├── requirements.txt            # Project dependencies
@@ -218,15 +157,20 @@ faithfulness_score = faithfullnes(response)
 ├── storage_key                 # Stored keyword index data
 └── README.md                   # Project documentation
 ```
+
 ---
+
 ## Limitations and Considerations
 
 - **Multilingual Embeddings**: Although the project uses multilingual embeddings, the model was primarily trained for **English**. The multilingual embeddings for **Hindi**, **Bengali**, and **Chinese** were not used, as I encountered issues running multilingual open-source models. Currently, only **English** is supported for semantic search.
   
-- **Vector Database Integration**: The system does not integrate with high-performance vector databases such as **Pinecone** or **Weaviate** for large-scale data handling. While the current setup works for smaller datasets, it would be advisable to integrate with these vector databases for production-level applications and large datasets.
+- **OCR Functionality**: The OCR step is currently disabled and is set to only copy PDFs instead of performing text recognition. This feature can be enabled again by adjusting the OCR processing logic in the `ocr.py` script if required.
 
+- **Vector Database Integration**: The system does not integrate with high-performance vector databases such as **Pinecone** or **Weaviate** for large-scale data handling. While the current setup works for smaller datasets, it would be advisable to integrate with these vector databases for production-level applications and large datasets.
 
 ---
 
 ### Notes:
 - **Ollama Server**: The `ollama serve` command must be running in order to process queries.
+
+---
