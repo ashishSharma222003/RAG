@@ -72,8 +72,7 @@ def save_users(users):
 st.title("RAG")
 
 st.markdown("""
-Faithfulness measures if the response from a query engine matches any source nodes.\n
-Relevancy measures if the response + source nodes match the query.
+RAG Chatbot with hybrid search.
 """)
 
 # Login system using session state
