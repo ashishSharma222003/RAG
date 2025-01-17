@@ -9,6 +9,7 @@ import shutil
 from ocr import process_pdf_files_in_directory
 from document_embedder import create_and_save_user_indices
 import tempfile
+from voicebot import speak_text,recognize_audio
 # Load users from the JSON file
 def load_users():
     try:
@@ -117,7 +118,7 @@ else:
 
     if check_user_directories(user_id):
         # Show the "Chat" tab only if the folder exists
-        tab1, tab2 = st.tabs(["Chat", "Folder Check"])
+        tab1, tab2, tab3 = st.tabs(["Chat", "Folder Check", "Voice Chat"])
 
         with tab1:
             st.header("Chat Functionality")
@@ -183,6 +184,32 @@ else:
                 else:
                     st.error("File size exceeds the 5MB limit. Please upload a smaller file.")
                 # st.rerun()
+        with tab3:
+            st.header("Voice Chatbot")
+            st.info("This tab allows you to interact with the chatbot using your voice.")
+
+            # Check if embeddings exist for the user
+            user_id = st.session_state.user_id
+            if check_user_directories(user_id):
+                if st.button("Start Voice Interaction"):
+                    # Recognize audio input
+                    user_query = recognize_audio()
+                    if user_query:
+                        st.success(f"You said: {user_query}")
+                        with st.spinner("Generating response..."):
+                            try:
+                                # Initialize query engine
+                                query_engine = initialize_query_engine(user_id=user_id)
+                                response = query_engine.query(user_query)
+                                st.markdown(f"**Response:**  {response.response}")
+                                
+                                # Speak the response
+                                speak_text(f"  {response.response}")
+                            except Exception as e:
+                                st.error(f"Error generating response: {e}")
+            else:
+                st.warning("Embeddings for this user do not exist. Please upload a file in the 'Folder Check' tab to create embeddings.")
+
     else:
         st.header("Embeddings Check")
         st.success(f"Embeddings for '{user_id}' exists in the database!")
