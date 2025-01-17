@@ -96,3 +96,7 @@ def initialize_query_engine(
 
     # print("Multi-step query engine initialized.")
     return custom_query_engine
+
+if __name__=="__main__":
+    query_engine =initialize_query_engine('admin')
+    response=query_engine.query("describe what is chain of thoughts")
