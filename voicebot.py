@@ -19,10 +19,24 @@ def recognize_audio():
             return f"Error with STT service: {e}"
 
 def speak_text(text):
-    """Converts text into audio using pyttsx3."""
+    """Converts text into audio using pyttsx3 with a customizable voice."""
     engine = pyttsx3.init()
+
+    # Get available voices
+    voices = engine.getProperty('voices')
+
+    # Select a female voice
+    for voice in voices:
+        if "female" in voice.name.lower() or "woman" in voice.name.lower():
+            engine.setProperty('voice', voice.id)
+            break
+    else:
+        # Fallback to the first voice if no female voice is found
+        engine.setProperty('voice', voices[0].id)
+
     engine.say(text)
     engine.runAndWait()
+
 
 
 def voicebot(user_id:str):
